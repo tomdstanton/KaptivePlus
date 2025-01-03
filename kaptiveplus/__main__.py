@@ -134,7 +134,6 @@ class KaptivePlusResult:
         """Write the typing result to files or file handles."""
         for fmt, arg in locals().items():
             if fmt in {'tsv', 'ffn' 'faa', 'genbank', 'fasta'}:
-                log(f'Writing {self} to {arg} in {fmt}')
                 if isinstance(arg, TextIOBase):
                     arg.write(self.format(fmt))
                 elif isinstance(arg, (PathLike, str)):
