@@ -216,7 +216,10 @@ def parse_args(a: list[str]) -> Namespace:
     )
     input_parser = parser.add_argument_group(bold('Inputs'), "")
     input_parser.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
-    input_parser.add_argument('hmm', help='HMM file', type=lambda i: check_file(i, panic=True))
+    input_parser.add_argument('hmm',
+                              help='HMMER-formatted profile HMM file for hmmsearch\n'
+                                   'Note if pressed, hmmscan will be performed instead',
+                              type=lambda i: check_file(i, panic=True))
     input_parser.add_argument('assembly', nargs='+', help='Assemblies in fasta(.gz|.xz|.bz2) format',
                               type=lambda i: check_file(i, panic=True))
     output_parser = parser.add_argument_group(bold('Output Options'), "")

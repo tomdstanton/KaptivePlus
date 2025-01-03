@@ -58,7 +58,8 @@ A Kaptive add-on for annotating genes in the context of locus typing results
 Inputs:
 
   db path/keyword       Kaptive database path or keyword
-  hmm                   HMM file
+  hmm                   HMMER-formatted profile HMM file for hmmsearch
+                        Note if pressed, hmmscan will be performed instead
   assembly              Assemblies in fasta(.gz|.xz|.bz2) format
 
 Output Options:
@@ -68,7 +69,7 @@ Output Options:
                         Accepts a single file or a directory (default: .)
   --ffn [dir/file]      Turn on gene nucleotide fasta output
                         Accepts a single file or a directory (default: .)
-  --gbk [dir/file]      Turn on Extra Locus Genbank output
+  --genbank [dir/file]  Turn on Extra Locus Genbank output
                         Accepts a single file or a directory (default: .)
   --fasta [dir/file]    Turn on Extra Locus nucleotide fasta output
                         Accepts a single file or a directory (default: .)
@@ -116,14 +117,17 @@ Other Options:
   -V, --verbose         Print debug messages to stderr
   -v, --version         Show version number and exit
   -h, --help            show this help message and exit
+
+kaptiveplus v0.0.0b1
 ```
 
 ## Input files
 
 **KaptivePlus** requires 3 positional arguments:
 1. `<db>`: this can be a file or [keyword](https://kaptive.readthedocs.io/en/latest/Databases.html#database-keywords).
-2. `<hmm>`: A [HMMER-formatted](https://www.genome.jp/tools/motif/hmmformat.htm) HMM file, which can be "pressed" 
-and contain multiple profiles for annotating genes. 
+2. `<hmm>`: A [HMMER-formatted](https://www.genome.jp/tools/motif/hmmformat.htm) profile HMM file for annotating genes.
+By default, `hmmsearch` will use the HMMs as queries and the proteome as the database, however if "pressed",
+`hmmscan` will use the HMMs as a database, and each protein sequence as a query.
 3. `<assembly>`: One or more bacterial genome assemblies in fasta format.
 
 ## Output files
@@ -136,8 +140,8 @@ and contain multiple profiles for annotating genes.
  - **Phenotype**: Kaptive phenotype (type) call
  - **Confidence**: Kaptive confidence
  - **Contig**: The name of the contig sequence the gene is on
- - **Start**: Start coordinate of the gene (0-based)
- - **End**: End coordinate of the gene (end-inclusive)
+ - **Start**: Start coordinate of the gene (**_0-based_**)
+ - **End**: End coordinate of the gene (**_end-inclusive_**)
  - **Strand**: Watson/Crick strand of the gene
  - **Gene**: Name of the gene (format: {contig}_000001)
  - **Best_HMM**: Accession of the HMM with the top hit
@@ -162,7 +166,7 @@ These gene cluster Genbank files can then be used for adding "extra loci" to **K
 and the `pyrodigal.GeneFinder` instance has been trained.
 
 ## API
-Like the (**Kaptive** API)[https://kaptive.readthedocs.io/en/latest/Usage.html#api], the **KaptivePlus** API is
+Like the [**Kaptive** API](https://kaptive.readthedocs.io/en/latest/Usage.html#api), the **KaptivePlus** API is
 very basic, but it allows you to easily incorporate it into your own Python programs/notebooks/pipelines etc.
 
 ```python
