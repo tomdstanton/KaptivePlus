@@ -1,35 +1,28 @@
 from __future__ import annotations
-
 from argparse import ArgumentParser, FileType, RawTextHelpFormatter, Namespace
 from io import TextIOBase
 from itertools import groupby, chain
 from operator import attrgetter
 from os import PathLike, path, fstat
 from sys import argv
-
 try:
     from os import process_cpu_count as cpu_count  # Only implemented in Python 3.13+
 except ImportError:
     from os import cpu_count
 from typing import Generator, Iterable, TextIO, Literal
 from concurrent.futures import ThreadPoolExecutor
-
 from Bio.SeqFeature import SeqFeature, SimpleLocation
 from Bio.SeqRecord import SeqRecord
-
 from pyhmmer import hmmsearch, hmmscan
 from pyhmmer.plan7 import OptimizedProfileBlock, HMMFile
 from pyhmmer.easel import TextSequence, Alphabet, TextSequenceBlock, SequenceFile
-
 from pyrodigal import GeneFinder, Gene, TrainingInfo
 from pyrodigal import __version__ as pyrodigal_version
-
 from kaptive.database import load_database, Database
 from kaptive.assembly import typing_pipeline, parse_assembly, Assembly
 from kaptive.typing import GeneResult
 from kaptive.log import log, bold, quit_with_error, warning
 from kaptive.utils import check_cpus, range_overlap, check_file, check_out, opener
-
 from kaptiveplus.version import __version__
 
 # Constants ------------------------------------------------------------------------------------------------------------
@@ -39,7 +32,6 @@ _HEADER = ('Assembly\tLocus\tPhenotype\tConfidence\tContig\tStart\tEnd\tStrand\t
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
-
 class KaptivePlusResult:
     def __init__(self, assembly: Assembly, *args, **kwargs):
         """Container for a KaptivePlus run on an assembly so all information can be returned from a pipeline function"""
@@ -85,7 +77,7 @@ class KaptivePlusResult:
                     key=attrgetter('name')), key=attrgetter('name')):  # Group results from all HMMs and sort by query
                 self.annotated.append(gene := genes[gene])  # Retrieve the gene and add to annotated
                 # Get the best hmm per query with max score and setting the name as 'product'
-                gene.best_hmm = (best_hit := max(hits, key=attrgetter('score'))).query.name.decode()
+                gene.best_hmm = (best_hit := max(hits, key=attrgetter('score'))).hits.query.name.decode()
                 gene.best_hmm_score = best_hit.score
 
     def identify_locus_genes(self, overlap_frac: float = 0.8):
@@ -231,10 +223,10 @@ def parse_args(a: list[str]) -> Namespace:
                                metavar='dir/file', help='Turn on gene nucleotide fasta output\n'
                                                         'Accepts a single file or a directory (default: %(const)s)')
     output_parser.add_argument('--genbank', nargs='?', default=None, const='.', type=check_out,
-                               metavar='dir/file', help='Turn on Extra Locus Genbank output\n'
+                               metavar='dir/file', help='Turn on Gene Cluster Genbank output\n'
                                                         'Accepts a single file or a directory (default: %(const)s)')
     output_parser.add_argument('--fasta', nargs='?', default=None, const='.', type=check_out,
-                               metavar='dir/file', help='Turn on Extra Locus nucleotide fasta output\n'
+                               metavar='dir/file', help='Turn on Gene Cluster nucleotide fasta output\n'
                                                         'Accepts a single file or a directory (default: %(const)s)')
     orf_parser = parser.add_argument_group(bold('ORF Options'), "\nOptions for tuning Pyrodigal")
     orf_parser.add_argument('--training-info', metavar='',

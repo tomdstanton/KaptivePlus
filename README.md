@@ -69,9 +69,9 @@ Output Options:
                         Accepts a single file or a directory (default: .)
   --ffn [dir/file]      Turn on gene nucleotide fasta output
                         Accepts a single file or a directory (default: .)
-  --genbank [dir/file]  Turn on Extra Locus Genbank output
+  --genbank [dir/file]  Turn on Gene Cluster Genbank output
                         Accepts a single file or a directory (default: .)
-  --fasta [dir/file]    Turn on Extra Locus nucleotide fasta output
+  --fasta [dir/file]    Turn on Gene Cluster nucleotide fasta output
                         Accepts a single file or a directory (default: .)
 
 ORF Options:
