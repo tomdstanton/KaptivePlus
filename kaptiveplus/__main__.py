@@ -19,9 +19,9 @@ from pyhmmer.easel import TextSequence, Alphabet, TextSequenceBlock, SequenceFil
 from pyrodigal import GeneFinder, Gene, TrainingInfo
 from pyrodigal import __version__ as pyrodigal_version
 from kaptive.database import load_database, Database
-from kaptive.assembly import typing_pipeline, parse_assembly, Assembly
-from kaptive.typing import GeneResult
-from kaptive.log import log, bold, quit_with_error, warning
+from kaptive.assembly import typing_pipeline, parse_assembly, Assembly, parse_result, _ASSEMBLY_FASTA_REGEX
+from kaptive.typing import GeneResult, TypingResult
+from kaptive.log import log, bold, quit_with_error, warning, bold_cyan
 from kaptive.utils import check_cpus, range_overlap, check_file, check_out, opener
 from kaptiveplus.version import __version__
 
@@ -29,14 +29,20 @@ from kaptiveplus.version import __version__
 _ALPHABET = Alphabet.amino()
 _HEADER = ('Assembly\tLocus\tPhenotype\tConfidence\tContig\tStart\tEnd\tStrand\tGene\tBest_HMM\tBest_HMM_Score\t'
            'Locus_gene\tLocus_gene_type\tGene_cluster\tProblems\n')
+_LOGO = r"""  _  __    _    ____ _____ _____     _______      
+ | |/ /   / \  |  _ \_   _|_ _\ \   / / ____| _   
+ | ' /   / _ \ | |_) || |  | | \ \ / /|  _| _| |_ 
+ | . \  / ___ \|  __/ | |  | |  \ V / | |__|_   _|
+ |_|\_\/_/   \_\_|    |_| |___|  \_/  |_____||_|                                                                                                
+"""
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class KaptivePlusResult:
-    def __init__(self, assembly: Assembly, *args, **kwargs):
+    def __init__(self, assembly: Assembly, typing_result: TypingResult = None, *args, **kwargs):
         """Container for a KaptivePlus run on an assembly so all information can be returned from a pipeline function"""
         self.assembly = assembly
-        self.typing_result = typing_pipeline(assembly, *args, **kwargs)
+        self.typing_result = typing_result or typing_pipeline(assembly, *args, **kwargs)
         self.annotated = []
         self.gene_clusters = []
 
@@ -202,8 +208,8 @@ class CDS(SeqFeature):
 def parse_args(a: list[str]) -> Namespace:
     parser = ArgumentParser(
         usage="%(prog)s <db> <hmm> <assembly> [<assembly> ...] [options]",
-        description='A Kaptive add-on for annotating genes in the context of locus typing results', add_help=False,
-        prog='kaptiveplus', epilog=f"%(prog)s v{__version__}", formatter_class=RawTextHelpFormatter
+        description=get_logo('A Kaptive add-on for annotating genes\nin the context of locus typing results'),
+        add_help=False, prog='kaptiveplus', epilog=f"%(prog)s v{__version__}", formatter_class=RawTextHelpFormatter
     )
     input_parser = parser.add_argument_group(bold('Inputs'), "")
     input_parser.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
@@ -213,6 +219,9 @@ def parse_args(a: list[str]) -> Namespace:
                               type=lambda i: check_file(i, panic=True))
     input_parser.add_argument('assembly', nargs='+', help='Assemblies in fasta(.gz|.xz|.bz2) format',
                               type=lambda i: check_file(i, panic=True))
+    input_parser.add_argument('--kaptive-results', metavar='', type=lambda i: check_file(i, panic=True),
+                              help='Optional pre-computed Kaptive results in JSON format\n'
+                                   'Note, this speeds up the pipeline')
     output_parser = parser.add_argument_group(bold('Output Options'), "")
     output_parser.add_argument('--tsv', type=FileType('at'), default='-', metavar='file',
                                help='Output file to write/append per-gene tabular results to (default: %(default)s)')
@@ -292,6 +301,10 @@ def grouper(pos_list: Iterable[int], distance: int, skip_sort: bool = False) -> 
         yield group
 
 
+def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
+    return bold_cyan(f'{_LOGO}\n{message.center(width)}')
+
+
 # def symbol_type(s: str) -> Literal['gene', 'protein', 'unknown']:
 #     """Evaluates a symbol using standard bacterial gene nomenclature"""
 #     if len(s) == 3 and s[1:].islower():
@@ -308,6 +321,13 @@ def grouper(pos_list: Iterable[int], distance: int, skip_sort: bool = False) -> 
 #     elif i == 'protein':
 #         return f'{s[0].lower()}{s[1:]}'
 #     return s
+
+
+def assembly_name(file: str | PathLike) -> str:
+    if match := _ASSEMBLY_FASTA_REGEX.search(basename := path.basename(file)):
+        return basename.rstrip(match.group())
+    return ''
+
 
 def get_gene_finder(training_info: str | PathLike | None, good_assembly: str | PathLike | None, verbose: bool = False,
                     **options) -> GeneFinder:
@@ -349,7 +369,8 @@ def write_headers(tsv: TextIO = None, no_header: bool = False) -> int:
 def plus_pipeline(
         assembly: str | PathLike | Assembly, db: str | PathLike | Database, profiles, gene_finder: GeneFinder = None,
         threads: int = 0, E: float = 1e-20, bit_cutoffs: Literal['noise', 'gathering', 'trusted'] = None,
-        min_n_genes: int = None, skip_n_unannotated: int = 2, verbose: bool = False) -> KaptivePlusResult | None:
+        min_n_genes: int = None, skip_n_unannotated: int = 2, verbose: bool = False, typing_result: TypingResult = None
+) -> KaptivePlusResult | None:
 
     # assembly = parse_assembly(args.assembly[0])
     # db = load_database(args.db)
@@ -363,7 +384,7 @@ def plus_pipeline(
         return None
     if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
         return None
-    result = KaptivePlusResult(assembly, db=db, threads=threads, verbose=verbose)
+    result = KaptivePlusResult(assembly, db=db, threads=threads, verbose=verbose, typing_result=typing_result)
     if not result.typing_result:
         return warning(f"No Kaptive results for {assembly}; cannot provide context for results")
     # Replace assembly contigs (kaptive.assembly.Contig) with SeqRecord subclass (kaptiveplus.Contig)
@@ -390,9 +411,15 @@ def main():
         args.training_info, args.good_assembly, args.verbose, min_gene=args.min_gene, min_edge_gene=args.min_edge_gene,
         max_overlap=args.max_overlap, min_mask=args.min_mask, mask=args.mask, closed=args.closed, meta=args.meta
     )
+    if args.kaptive_results:
+        with opener(args.kaptive_results, verbose=args.verbose, mode='rt') as f:
+            kaptive_results = {r.sample_name: r for line in f if (r := parse_result(line, db))}
+    else:
+        kaptive_results = {}
     for assembly in args.assembly:
         if result := plus_pipeline(assembly, db, profiles, gene_finder, args.threads, args.E, args.bit_cutoffs,
-                                   args.min_n_genes, args.skip_n_unannotated, args.verbose):
+                                   args.min_n_genes, args.skip_n_unannotated, args.verbose,
+                                   kaptive_results.get(assembly_name(assembly), None)):
             write_headers(args.tsv, args.no_header)  # Write headers only when we have positive results
             args.no_header = True  # This prevents the header from being written again
             result.write(args.tsv, args.faa, args.ffn, args.genbank, args.fasta)  # Write results to handles/files

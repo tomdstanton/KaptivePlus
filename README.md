@@ -53,7 +53,14 @@ kaptiveplus kpsc_k Wzy.hmm assembly.fasta > results.tsv
 ```
 usage: kaptiveplus <db> <hmm> <assembly> [<assembly> ...] [options]
 
-A Kaptive add-on for annotating genes in the context of locus typing results
+  _  __    _    ____ _____ _____     _______      
+ | |/ /   / \  |  _ \_   _|_ _\ \   / / ____| _   
+ | ' /   / _ \ | |_) || |  | | \ \ / /|  _| _| |_ 
+ | . \  / ___ \|  __/ | |  | |  \ V / | |__|_   _|
+ |_|\_\/_/   \_\_|    |_| |___|  \_/  |_____||_|                                                                                                
+
+A Kaptive add-on for annotating genes
+in the context of locus typing results
 
 Inputs:
 
@@ -61,6 +68,8 @@ Inputs:
   hmm                   HMMER-formatted profile HMM file for hmmsearch
                         Note if pressed, hmmscan will be performed instead
   assembly              Assemblies in fasta(.gz|.xz|.bz2) format
+  --kaptive-results     Optional pre-computed Kaptive results in JSON format
+                        Note, this speeds up the pipeline
 
 Output Options:
 
@@ -118,7 +127,7 @@ Other Options:
   -v, --version         Show version number and exit
   -h, --help            show this help message and exit
 
-kaptiveplus v0.0.0b1
+kaptiveplus v0.0.0b2
 ```
 
 ## Input files
